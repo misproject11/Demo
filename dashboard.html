@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Dashboard Admin — Warung Nusantara</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body class="dash-body">
+
+  <aside class="dash-sidebar" id="dashSidebar">
+    <div class="sidebar-logo">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <path d="M16 2L4 10V22L16 30L28 22V10L16 2Z" fill="#8b1a1a" opacity="0.9"/>
+        <path d="M16 7L9 12V20L16 25L23 20V12L16 7Z" fill="#c8973a" opacity="0.7"/>
+        <circle cx="16" cy="16" r="3" fill="#fff"/>
+      </svg>
+      <div><h2>Warung <em>Nusantara</em></h2><span>Panel Admin</span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <span class="sidebar-section-label">Utama</span>
+      <button class="sidebar-link active" data-panel="overview" onclick="switchPanel('overview')">
+        <i data-lucide="layout-dashboard"></i> Ringkasan
+      </button>
+      <button class="sidebar-link" data-panel="orders" onclick="switchPanel('orders')">
+        <i data-lucide="receipt"></i> Pesanan Masuk
+        <span class="sidebar-badge" id="badge-orders">0</span>
+      </button>
+      <span class="sidebar-section-label">Kelola Konten</span>
+      <button class="sidebar-link" data-panel="menu" onclick="switchPanel('menu')">
+        <i data-lucide="utensils"></i> Kelola Menu
+      </button>
+      <button class="sidebar-link" data-panel="promo" onclick="switchPanel('promo')">
+        <i data-lucide="tag"></i> Promo & Diskon
+      </button>
+      <span class="sidebar-section-label">Pengaturan</span>
+      <button class="sidebar-link" data-panel="settings" onclick="switchPanel('settings')">
+        <i data-lucide="settings"></i> Pengaturan Toko
+      </button>
+      <a href="../index.html" class="sidebar-link" target="_blank">
+        <i data-lucide="external-link"></i> Lihat Website
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar">A</div>
+        <div class="sidebar-user-info">
+          <strong>Admin</strong>
+          <span id="login-time">-</span>
+        </div>
+      </div>
+      <button class="sidebar-link" onclick="doLogout()" style="color:var(--red-bright)">
+        <i data-lucide="log-out"></i> Keluar
+      </button>
+    </div>
+  </aside>
+
+  <div class="dash-main">
+    <header class="dash-topbar">
+      <div style="display:flex;align-items:center;gap:0.75rem">
+        <button class="btn-icon" id="sidebarToggle"><i data-lucide="panel-left"></i></button>
+        <span class="topbar-title" id="topbarTitle">Ringkasan</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn-icon" id="themeToggle"><i data-lucide="sun"></i></button>
+        <button class="btn-icon" onclick="doLogout()" title="Keluar"><i data-lucide="log-out"></i></button>
+      </div>
+    </header>
+
+    <div class="dash-content">
+
+      <!-- OVERVIEW -->
+      <div class="dash-panel active" id="panel-overview">
+        <div class="stat-grid" id="statGrid"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem" id="overviewGrids">
+          <div>
+            <div class="panel-header" style="margin-bottom:1rem">
+              <h2>Pesanan Terbaru</h2>
+              <button class="btn-ghost" style="padding:0.4rem 0.8rem;font-size:0.75rem" onclick="switchPanel('orders')">Lihat Semua <i data-lucide="arrow-right" style="width:12px;height:12px"></i></button>
+            </div>
+            <div class="data-table-wrap">
+              <table class="data-table">
+                <thead><tr><th>No. Pesanan</th><th>Nama</th><th>Total</th><th>Status</th></tr></thead>
+                <tbody id="recent-orders-body"><tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:2rem">Belum ada pesanan</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <div class="panel-header" style="margin-bottom:1rem">
+              <h2>Menu Aktif</h2>
+              <button class="btn-ghost" style="padding:0.4rem 0.8rem;font-size:0.75rem" onclick="switchPanel('menu')">Kelola <i data-lucide="arrow-right" style="width:12px;height:12px"></i></button>
+            </div>
+            <div class="data-table-wrap">
+              <table class="data-table">
+                <thead><tr><th>Menu</th><th>Kategori</th><th>Harga</th><th>Status</th></tr></thead>
+                <tbody id="top-menu-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ORDERS -->
+      <div class="dash-panel" id="panel-orders">
+        <div class="panel-header">
+          <h2>Pesanan Masuk</h2>
+          <div class="panel-header-actions">
+            <div class="search-box">
+              <i data-lucide="search"></i>
+              <input type="text" placeholder="Cari nama atau no. pesanan..." id="searchOrder" oninput="filterOrders()"/>
+            </div>
+            <button class="btn-ghost" style="padding:0.5rem 0.9rem;font-size:0.8rem" onclick="clearAllOrders()">
+              <i data-lucide="trash-2" style="width:14px;height:14px"></i> Bersihkan
+            </button>
+          </div>
+        </div>
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead><tr><th>No. Pesanan</th><th>Nama</th><th>Total</th><th>Pembayaran</th><th>Waktu</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="orders-body"><tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem">Belum ada pesanan masuk</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MENU -->
+      <div class="dash-panel" id="panel-menu">
+        <div class="panel-header">
+          <h2>Kelola Menu</h2>
+          <div class="panel-header-actions">
+            <div class="search-box">
+              <i data-lucide="search"></i>
+              <input type="text" placeholder="Cari menu..." id="searchMenu" oninput="filterMenuTable()"/>
+            </div>
+            <button class="btn-primary" style="padding:0.55rem 1rem;font-size:0.82rem" onclick="openMenuModal()">
+              <i data-lucide="plus" style="width:14px;height:14px"></i> Tambah Menu
+            </button>
+          </div>
+        </div>
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Nama Menu</th><th>Daerah</th><th>Kategori</th><th>Harga</th><th>Badge</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="menu-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PROMO -->
+      <div class="dash-panel" id="panel-promo">
+        <div class="panel-header">
+          <h2>Promo &amp; Diskon</h2>
+          <button class="btn-primary" style="padding:0.55rem 1rem;font-size:0.82rem" onclick="openPromoModal()">
+            <i data-lucide="plus" style="width:14px;height:14px"></i> Tambah Promo
+          </button>
+        </div>
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Nama Promo</th><th>Deskripsi</th><th>Diskon</th><th>Berlaku Hingga</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="promo-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="dash-panel" id="panel-settings">
+        <div class="panel-header"><h2>Pengaturan Toko</h2></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;max-width:780px">
+          <div style="grid-column:1/-1">
+            <div class="data-table-wrap" style="padding:1.5rem">
+              <h3 style="font-family:var(--font-display);font-size:1rem;margin-bottom:1.25rem">Informasi Toko</h3>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+                <div class="form-group"><label>Nama Toko</label><input type="text" id="set-name" value="Warung Nusantara"/></div>
+                <div class="form-group"><label>No. WhatsApp Admin</label><input type="text" id="set-wa" value="6281234567890"/></div>
+                <div class="form-group" style="grid-column:1/-1"><label>Alamat Toko</label><textarea id="set-alamat" rows="2">Jl. Raya Nusantara No. 12, Jakarta Selatan</textarea></div>
+                <div class="form-group"><label>Jam Buka</label><input type="text" id="set-open" value="08.00"/></div>
+                <div class="form-group"><label>Jam Tutup</label><input type="text" id="set-close" value="21.00"/></div>
+                <div class="form-group"><label>Ongkir Pengiriman (Rp)</label><input type="number" id="set-ongkir" value="5000"/></div>
+                <div class="form-group"><label>Link Google Maps</label><input type="text" id="set-maps" value="https://maps.google.com/?q=Warung+Nusantara"/></div>
+              </div>
+              <button class="btn-primary" style="margin-top:1.25rem" onclick="saveSettings()">
+                <i data-lucide="save" style="width:15px;height:15px"></i> Simpan Pengaturan
+              </button>
+            </div>
+          </div>
+          <div class="data-table-wrap" style="padding:1.5rem">
+            <h3 style="font-family:var(--font-display);font-size:1rem;margin-bottom:1rem">Keamanan</h3>
+            <div class="form-group" style="margin-bottom:0.75rem"><label>Username Admin</label><input type="text" id="set-user" value="admin"/></div>
+            <div class="form-group" style="margin-bottom:0.75rem"><label>Password Baru</label><input type="password" id="set-pass" placeholder="Kosongkan jika tidak diubah"/></div>
+            <div class="form-group" style="margin-bottom:1rem"><label>Konfirmasi Password</label><input type="password" id="set-pass2" placeholder="Ulangi password baru"/></div>
+            <button class="btn-outline" onclick="changePassword()"><i data-lucide="lock" style="width:15px;height:15px"></i> Ubah Password</button>
+          </div>
+          <div class="data-table-wrap" style="padding:1.5rem">
+            <h3 style="font-family:var(--font-display);font-size:1rem;margin-bottom:1rem">Data &amp; Backup</h3>
+            <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:1.25rem;line-height:1.7">Ekspor semua data menu dan pesanan ke file JSON untuk backup atau migrasi.</p>
+            <div style="display:flex;flex-direction:column;gap:0.6rem">
+              <button class="btn-outline" onclick="exportData()"><i data-lucide="download" style="width:15px;height:15px"></i> Ekspor Data (JSON)</button>
+              <label class="btn-ghost" style="cursor:pointer;display:inline-flex;align-items:center;gap:8px;padding:0.75rem 1.75rem;font-size:0.9rem">
+                <i data-lucide="upload" style="width:15px;height:15px"></i> Impor Data
+                <input type="file" accept=".json" id="importInput" style="display:none" onchange="importData(event)"/>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL: MENU -->
+  <div class="modal-overlay" id="menuModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="menuModalTitle">Tambah Menu Baru</h3>
+        <button class="btn-icon" onclick="closeModal('menuModal')"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="menu-edit-id"/>
+        <div class="form-group" style="margin-bottom:0.75rem">
+          <label>Nama Menu <span class="req">*</span></label>
+          <input type="text" id="m-name" placeholder="cth: Nasi Padang Komplit"/>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group"><label>Daerah Asal <span class="req">*</span></label><input type="text" id="m-region" placeholder="cth: Sumatera Barat"/></div>
+          <div class="form-group"><label>Kategori <span class="req">*</span></label>
+            <select id="m-cat">
+              <option value="nasi">Nasi & Lauk</option>
+              <option value="soto">Soto & Sup</option>
+              <option value="gorengan">Gorengan</option>
+              <option value="minuman">Minuman</option>
+              <option value="promo">Promo / Paket</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-grid-2" style="margin-top:0.75rem">
+          <div class="form-group"><label>Harga (Rp) <span class="req">*</span></label><input type="number" id="m-price" placeholder="cth: 25000" min="0"/></div>
+          <div class="form-group"><label>Harga Coret (Rp)</label><input type="number" id="m-old-price" placeholder="Kosongkan jika tidak ada" min="0"/></div>
+        </div>
+        <div class="form-grid-2" style="margin-top:0.75rem">
+          <div class="form-group"><label>Badge</label>
+            <select id="m-badge">
+              <option value="">Tidak Ada</option>
+              <option value="new">Baru</option>
+              <option value="hot">Laris</option>
+              <option value="promo">Promo</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Ikon</label>
+            <select id="m-icon">
+              <option value="nasi">Nasi</option>
+              <option value="rendang">Rendang/Daging</option>
+              <option value="soto">Soto/Kuah</option>
+              <option value="rawon">Rawon/Sup Hitam</option>
+              <option value="ayam">Ayam</option>
+              <option value="tempe">Tempe/Gorengan</option>
+              <option value="cendol">Minuman</option>
+              <option value="gulai">Ikan/Gulai</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:0.75rem">
+          <label>Deskripsi</label>
+          <textarea id="m-desc" rows="2" placeholder="Deskripsi singkat menu..."></textarea>
+        </div>
+        <div class="toggle-wrap" style="margin-top:0.75rem">
+          <span>Tampilkan di menu aktif</span>
+          <div class="toggle on" id="m-active" onclick="this.classList.toggle('on')"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" onclick="closeModal('menuModal')">Batal</button>
+        <button class="btn-primary" onclick="saveMenu()"><i data-lucide="save" style="width:15px;height:15px"></i> Simpan Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PROMO -->
+  <div class="modal-overlay" id="promoModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="promoModalTitle">Tambah Promo</h3>
+        <button class="btn-icon" onclick="closeModal('promoModal')"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="promo-edit-id"/>
+        <div class="form-group" style="margin-bottom:0.75rem"><label>Nama Promo <span class="req">*</span></label><input type="text" id="p-name" placeholder="cth: Paket Keluarga Weekend"/></div>
+        <div class="form-group" style="margin-bottom:0.75rem"><label>Deskripsi</label><textarea id="p-desc" rows="2" placeholder="Detail promo..."></textarea></div>
+        <div class="form-grid-2">
+          <div class="form-group"><label>Diskon (%)</label><input type="number" id="p-disc" placeholder="cth: 30" min="0" max="100"/></div>
+          <div class="form-group"><label>Berlaku Hingga</label><input type="date" id="p-until"/></div>
+        </div>
+        <div class="toggle-wrap" style="margin-top:0.75rem">
+          <span>Aktifkan Promo</span>
+          <div class="toggle on" id="p-active" onclick="this.classList.toggle('on')"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" onclick="closeModal('promoModal')">Batal</button>
+        <button class="btn-primary" onclick="savePromo()"><i data-lucide="save" style="width:15px;height:15px"></i> Simpan Promo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ORDER DETAIL -->
+  <div class="modal-overlay" id="orderModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Detail Pesanan</h3>
+        <button class="btn-icon" onclick="closeModal('orderModal')"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" id="orderModalBody"></div>
+      <div class="modal-footer">
+        <button class="btn-ghost" onclick="closeModal('orderModal')">Tutup</button>
+        <button class="btn-primary" id="orderWABtn"><i data-lucide="message-circle" style="width:15px;height:15px"></i> Hubungi via WA</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFIRM -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal" style="max-width:380px">
+      <div class="modal-header">
+        <h3 id="confirmTitle">Konfirmasi</h3>
+        <button class="btn-icon" onclick="closeModal('confirmModal')"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body"><p id="confirmMsg" style="font-size:0.875rem;color:var(--text-secondary);line-height:1.7"></p></div>
+      <div class="modal-footer">
+        <button class="btn-ghost" onclick="closeModal('confirmModal')">Batal</button>
+        <button class="btn-primary" id="confirmOkBtn" style="background:var(--red)">Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script src="../js/app.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

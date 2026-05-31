@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Admin Login — Warung Nusantara</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body class="login-body">
+
+  <!-- Decorative background -->
+  <div class="login-bg">
+    <div class="login-grain"></div>
+    <svg class="login-batik" viewBox="0 0 500 500" fill="none" aria-hidden="true">
+      <circle cx="250" cy="250" r="230" stroke="#c8973a" stroke-width="0.5" opacity="0.1"/>
+      <circle cx="250" cy="250" r="180" stroke="#c8973a" stroke-width="0.5" opacity="0.08"/>
+      <circle cx="250" cy="250" r="130" stroke="#8b1a1a" stroke-width="0.5" opacity="0.1"/>
+      <circle cx="250" cy="250" r="80"  stroke="#c8973a" stroke-width="0.5" opacity="0.08"/>
+      <path d="M250 20L480 250L250 480L20 250Z" stroke="#c8973a" stroke-width="0.4" opacity="0.07"/>
+      <path d="M250 80L420 250L250 420L80 250Z" stroke="#c8973a" stroke-width="0.4" opacity="0.06"/>
+    </svg>
+  </div>
+
+  <!-- Login card -->
+  <div class="login-wrap">
+    <div class="login-card" id="loginCard">
+
+      <!-- Logo -->
+      <div class="login-logo">
+        <svg width="48" height="48" viewBox="0 0 32 32" fill="none">
+          <path d="M16 2L4 10V22L16 30L28 22V10L16 2Z" fill="#8b1a1a" opacity="0.9"/>
+          <path d="M16 7L9 12V20L16 25L23 20V12L16 7Z" fill="#c8973a" opacity="0.7"/>
+          <circle cx="16" cy="16" r="3" fill="#fff"/>
+        </svg>
+        <div>
+          <h1>Warung <em>Nusantara</em></h1>
+          <span>Panel Pengelola</span>
+        </div>
+      </div>
+
+      <div class="login-divider"></div>
+
+      <!-- Form -->
+      <div class="login-form" id="loginForm">
+        <p class="login-subtitle">Masuk untuk mengelola menu, promo, dan pesanan.</p>
+
+        <div class="form-group">
+          <label for="inp-user">Username</label>
+          <div class="input-wrap">
+            <i data-lucide="user" class="input-icon"></i>
+            <input
+              type="text"
+              id="inp-user"
+              placeholder="admin"
+              autocomplete="username"
+            />
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:1rem">
+          <label for="inp-pass">Password</label>
+          <div class="input-wrap">
+            <i data-lucide="lock" class="input-icon"></i>
+            <input
+              type="password"
+              id="inp-pass"
+              placeholder="••••••••"
+              autocomplete="current-password"
+            />
+            <button class="pass-toggle" id="passToggle" aria-label="Tampilkan password" type="button">
+              <i data-lucide="eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="login-error" id="loginError" style="display:none">
+          <i data-lucide="alert-circle"></i>
+          <span id="loginErrorMsg">Username atau password salah.</span>
+        </div>
+
+        <button class="btn-primary login-btn" id="loginBtn" onclick="doLogin()">
+          <span id="loginBtnText">Masuk ke Dashboard</span>
+          <i data-lucide="log-in" style="width:16px;height:16px"></i>
+        </button>
+
+        <div class="login-hint">
+          <i data-lucide="info" style="width:12px;height:12px"></i>
+          <span>Default: <code>admin</code> / <code>nusantara2025</code></span>
+        </div>
+      </div>
+
+      <!-- Locked state (after 5 failed attempts) -->
+      <div class="login-locked" id="loginLocked" style="display:none">
+        <i data-lucide="shield-off" style="width:40px;height:40px;color:var(--red-bright)"></i>
+        <h3>Akses Dikunci</h3>
+        <p>Terlalu banyak percobaan gagal. Coba lagi dalam <strong id="lockTimer">5:00</strong>.</p>
+      </div>
+
+    </div>
+
+    <p class="login-back">
+      <a href="../index.html">
+        <i data-lucide="arrow-left" style="width:14px;height:14px"></i>
+        Kembali ke Beranda
+      </a>
+    </p>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    /* ── CONFIG ─────────────────────────────────────────────── */
+    const ADMIN_CREDS = {
+      username: 'admin',
+      // Password di-hash sederhana — ganti value di bawah dengan hash SHA-256 dari password Anda
+      // Default password: nusantara2025
+      // Untuk produksi: gunakan backend + bcrypt
+      password: 'nusantara2025',
+    };
+
+    const MAX_ATTEMPTS = 5;
+    const LOCK_MINUTES = 5;
+
+    /* ── STATE ──────────────────────────────────────────────── */
+    let attempts   = parseInt(localStorage.getItem('wn_admin_attempts') || '0');
+    let lockedUntil = parseInt(localStorage.getItem('wn_admin_locked') || '0');
+    let lockInterval = null;
+
+    /* ── CHECK ALREADY LOGGED IN ────────────────────────────── */
+    if (localStorage.getItem('wn_admin_auth') === 'true') {
+      window.location.replace('dashboard.html');
+    }
+
+    /* ── CHECK LOCK ON LOAD ─────────────────────────────────── */
+    function checkLock() {
+      if (lockedUntil && Date.now() < lockedUntil) {
+        showLocked();
+        return true;
+      }
+      if (lockedUntil && Date.now() >= lockedUntil) {
+        // Unlock
+        localStorage.removeItem('wn_admin_locked');
+        localStorage.removeItem('wn_admin_attempts');
+        attempts = 0;
+        lockedUntil = 0;
+      }
+      return false;
+    }
+
+    function showLocked() {
+      document.getElementById('loginForm').style.display = 'none';
+      document.getElementById('loginLocked').style.display = 'flex';
+      startLockTimer();
+    }
+
+    function startLockTimer() {
+      const el = document.getElementById('lockTimer');
+      clearInterval(lockInterval);
+      lockInterval = setInterval(() => {
+        const remaining = Math.max(0, lockedUntil - Date.now());
+        const m = String(Math.floor(remaining / 60000)).padStart(2,'0');
+        const s = String(Math.floor((remaining % 60000) / 1000)).padStart(2,'0');
+        if (el) el.textContent = `${m}:${s}`;
+        if (remaining <= 0) {
+          clearInterval(lockInterval);
+          localStorage.removeItem('wn_admin_locked');
+          localStorage.removeItem('wn_admin_attempts');
+          document.getElementById('loginForm').style.display = 'flex';
+          document.getElementById('loginLocked').style.display = 'none';
+          attempts = 0;
+        }
+      }, 1000);
+    }
+
+    /* ── LOGIN LOGIC ────────────────────────────────────────── */
+    function doLogin() {
+      if (checkLock()) return;
+
+      const user    = document.getElementById('inp-user').value.trim();
+      const pass    = document.getElementById('inp-pass').value;
+      const errEl   = document.getElementById('loginError');
+      const errMsg  = document.getElementById('loginErrorMsg');
+      const btn     = document.getElementById('loginBtn');
+      const btnText = document.getElementById('loginBtnText');
+
+      // Loading state
+      btn.disabled = true;
+      btnText.textContent = 'Memeriksa...';
+
+      setTimeout(() => {
+        if (user === ADMIN_CREDS.username && pass === ADMIN_CREDS.password) {
+          // Success
+          localStorage.setItem('wn_admin_auth', 'true');
+          localStorage.setItem('wn_admin_time', Date.now().toString());
+          localStorage.removeItem('wn_admin_attempts');
+          btnText.textContent = 'Berhasil! Mengalihkan...';
+
+          // Animate card out
+          document.getElementById('loginCard').style.transform = 'translateY(-20px)';
+          document.getElementById('loginCard').style.opacity = '0';
+
+          setTimeout(() => {
+            window.location.replace('dashboard.html');
+          }, 600);
+
+        } else {
+          // Failed
+          attempts++;
+          localStorage.setItem('wn_admin_attempts', attempts.toString());
+
+          btn.disabled = false;
+          btnText.textContent = 'Masuk ke Dashboard';
+
+          document.getElementById('inp-pass').value = '';
+          document.getElementById('inp-pass').classList.add('error');
+          document.getElementById('inp-user').classList.add('error');
+
+          const remaining = MAX_ATTEMPTS - attempts;
+
+          if (attempts >= MAX_ATTEMPTS) {
+            lockedUntil = Date.now() + LOCK_MINUTES * 60 * 1000;
+            localStorage.setItem('wn_admin_locked', lockedUntil.toString());
+            showLocked();
+          } else {
+            errMsg.textContent = `Username atau password salah. ${remaining} percobaan tersisa.`;
+            errEl.style.display = 'flex';
+            document.getElementById('inp-user').addEventListener('input', clearErr);
+            document.getElementById('inp-pass').addEventListener('input', clearErr);
+          }
+
+          // Shake animation
+          document.getElementById('loginCard').classList.add('shake');
+          setTimeout(() => document.getElementById('loginCard').classList.remove('shake'), 500);
+        }
+      }, 700);
+    }
+
+    function clearErr() {
+      document.getElementById('loginError').style.display = 'none';
+      document.getElementById('inp-user').classList.remove('error');
+      document.getElementById('inp-pass').classList.remove('error');
+    }
+
+    /* ── PASSWORD TOGGLE ────────────────────────────────────── */
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      checkLock();
+
+      const toggle = document.getElementById('passToggle');
+      const passEl = document.getElementById('inp-pass');
+
+      toggle?.addEventListener('click', () => {
+        const isPass = passEl.type === 'password';
+        passEl.type = isPass ? 'text' : 'password';
+        const icon = toggle.querySelector('svg');
+        icon.setAttribute('data-lucide', isPass ? 'eye-off' : 'eye');
+        lucide.createIcons();
+      });
+
+      // Enter key submit
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Enter') doLogin();
+      });
+
+      // Apply saved theme
+      const theme = localStorage.getItem('wn_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', theme);
+    });
+  </script>
+</body>
+</html>
